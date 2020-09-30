@@ -1,0 +1,340 @@
+---
+title: "Storyboard example"
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+    social: menu
+    source: embed
+---
+
+
+```{r setup, include= FALSE}
+library(sp)
+library(sf)
+library(geojsonio)
+library(leaflet)
+library(leaflet.extras)
+library(RColorBrewer)
+library(readxl)
+library(dplyr)
+library(mapview)
+library(hablar)
+library(tidyr)
+library(htmlwidgets)
+library(tidyverse)
+
+############ PREPARE RAW DATA AND BOUNDARY FILE
+#####
+LUI_main<- read_excel("Data/Cluster analysis v1.8 JH for WPIE.xlsx", sheet = 1)
+LUI_sub<- read_excel("Data/Cluster analysis v1.8 JH for WPIE.xlsx", sheet = 2)
+
+# Clean up 
+LUI_main<-LUI_main[-1,-1]
+LUI_sub<- LUI_sub[c(-1,-575:-579),-1]  
+
+# Match by PC code
+combi <- merge(LUI_sub,LUI_main,by = "PC code", all.y = T)
+combi <- combi[,-9]
+
+#remame cols so it's easier for later
+colnames(combi) <- c("pcon19cd", "pcon19nm", "Spending power", "Dependency", "Crime", "Deprivation", "Health", "Blight", "Levelling-Up index")
+
+# JSON MAP - https://geoportal.statistics.gov.uk/datasets/westminster-parliamentary-constituencies-december-2019-boundaries-uk-buc
+# Import json
+pc2019 <- geojson_sf("https://opendata.arcgis.com/datasets/4c191bee309d4b2d8b2c5b94d2512af9_0.geojson")
+
+
+# set colour pallette
+pallette <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+
+#####
+# MAP 1 - overall LU indicator
+#####
+map1<- combi[,c(1,2,9)]
+
+#merge with master 
+pc_data1 <- merge(pc2019,map1, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data1$ntile <- ntile(pc_data1$`Levelling-Up index`, 5)  
+
+#relabel quintile
+# change values to categories
+pc_data1$ntile[pc_data1$ntile == 1] <- "1 (lowest rank)"
+pc_data1$ntile[pc_data1$ntile == 2] <- "2"
+pc_data1$ntile[pc_data1$ntile == 3] <- "3"
+pc_data1$ntile[pc_data1$ntile == 4] <- "4"
+pc_data1$ntile[pc_data1$ntile== 5] <- "5 (highest rank)"
+
+factpal <- colorFactor(pallette, domain = pc_data1$ntile) 
+
+#Label
+labels1 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data1$pcon19nm.x, round(pc_data1$`Levelling-Up index`,0)) %>% lapply(htmltools::HTML)
+
+######
+# MAP 2 - spending power
+######
+
+#select for map 2
+map2<- combi[,c(1,2,3)]
+
+#merge with master 
+pc_data2 <- merge(pc2019,map2, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data2$ntile <- ntile(pc_data2$`Spending power`, 5)  
+
+#relabel quintile
+# change values to categories
+pc_data2$ntile[pc_data2$ntile == 1] <- "1 (lowest rank)"
+pc_data2$ntile[pc_data2$ntile == 2] <- "2"
+pc_data2$ntile[pc_data2$ntile == 3] <- "3"
+pc_data2$ntile[pc_data2$ntile == 4] <- "4"
+pc_data2$ntile[pc_data2$ntile== 5] <- "5 (highest rank)"
+
+factpal2 <- colorFactor(pallette, domain = pc_data2$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels2 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data2$pcon19nm.x, round(pc_data2$`Spending power`,0)) %>% lapply(htmltools::HTML)
+
+
+#####
+# MAP 3 - dependency
+#####
+
+#select for map 3 
+map3<- combi[,c(1,2,4)]
+
+#merge with master 
+pc_data3 <- merge(pc2019,map3, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data3$ntile <- ntile(pc_data3$Dependency, 5)  
+
+# change values to categories
+pc_data3$ntile[pc_data3$ntile == 1] <- "1 (lowest rank)"
+pc_data3$ntile[pc_data3$ntile == 2] <- "2"
+pc_data3$ntile[pc_data3$ntile == 3] <- "3"
+pc_data3$ntile[pc_data3$ntile == 4] <- "4"
+pc_data3$ntile[pc_data3$ntile== 5] <- "5 (highest rank)"
+
+factpal3 <- colorFactor(pallette, domain = pc_data3$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+#this makes the hover over popup label
+labels3 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data3$pcon19nm.x, round(pc_data3$Dependency,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 4 - Crime
+#####
+
+#select for map 3 
+map4<- combi[,c(1,2,5)]
+
+#merge with master 
+pc_data4 <- merge(pc2019,map4, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data4$ntile <- ntile(pc_data4$Crime, 5)  
+
+# change values to categories
+pc_data4$ntile[pc_data4$ntile == 1] <- "1 (lowest rank)"
+pc_data4$ntile[pc_data4$ntile == 2] <- "2"
+pc_data4$ntile[pc_data4$ntile == 3] <- "3"
+pc_data4$ntile[pc_data4$ntile == 4] <- "4"
+pc_data4$ntile[pc_data4$ntile== 5] <- "5 (highest rank)"
+
+factpal4 <- colorFactor(pallette, domain = pc_data4$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels4 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data4$pcon19nm.x, round(pc_data4$Crime,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 5 - Deprivation
+#####
+
+#select for map 3 
+map5<- combi[,c(1,2,6)]
+
+#merge with master 
+pc_data5 <- merge(pc2019,map5, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data5$ntile <- ntile(pc_data5$Deprivation, 5)  
+
+# change values to categories
+pc_data5$ntile[pc_data5$ntile == 1] <- "1 (lowest rank)"
+pc_data5$ntile[pc_data5$ntile == 2] <- "2"
+pc_data5$ntile[pc_data5$ntile == 3] <- "3"
+pc_data5$ntile[pc_data5$ntile == 4] <- "4"
+pc_data5$ntile[pc_data5$ntile== 5] <- "5 (highest rank)"
+
+factpal5 <- colorFactor(pallette, domain = pc_data5$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#labels
+labels5 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data5$pcon19nm.x, round(pc_data5$Deprivation,0)) %>% lapply(htmltools::HTML)
+
+##### 
+## MAP 6 - Health
+##### 
+# Wales is missing
+
+#select for map 6
+map6<- combi[,c(1,2,7)]
+
+#merge with master 
+pc_data6 <- merge(pc2019,map6, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data6$ntile <- ntile(pc_data6$Health, 5)  
+
+# change values to categories
+pc_data6$ntile[pc_data6$ntile == 1] <- "1 (lowest rank)"
+pc_data6$ntile[pc_data6$ntile == 2] <- "2"
+pc_data6$ntile[pc_data6$ntile == 3] <- "3"
+pc_data6$ntile[pc_data6$ntile == 4] <- "4"
+pc_data6$ntile[pc_data6$ntile== 5] <- "5 (highest rank)"
+
+factpal6 <- colorFactor(pallette, domain = pc_data6$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels6 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data6$pcon19nm.x, round(pc_data6$Health,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 7 - Blight
+#####
+
+#select for map 6
+map7<- combi[,c(1,2,8)]
+
+#merge with master 
+pc_data7 <- merge(pc2019,map7, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data7$ntile <- ntile(pc_data7$Blight, 5)  
+
+# change values to categories
+pc_data7$ntile[pc_data7$ntile == 1] <- "1 (lowest rank)"
+pc_data7$ntile[pc_data7$ntile == 2] <- "2"
+pc_data7$ntile[pc_data7$ntile == 3] <- "3"
+pc_data7$ntile[pc_data7$ntile == 4] <- "4"
+pc_data7$ntile[pc_data7$ntile== 5] <- "5 (highest rank)"
+
+factpal7 <- colorFactor(pallette, domain = pc_data7$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels7 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data7$pcon19nm.x, round(pc_data7$Blight,0)) %>% lapply(htmltools::HTML)
+
+```
+
+
+### The first map looks at the overall Levelling-Up Index. {data-commentary-width=400}
+
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data1, stroke = T, color = ~factpal(pc_data1$ntile),opacity = 1, fillOpacity = 1, label = labels1)  %>% 
+  addLegend(pal = factpal, values = pc_data1$ntile, labels=pc_data1$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+```
+
+*** 
+Some text about things.
+
+    
+### The second map looks at spending power. {data-commentary-width=400}
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data2, stroke = T, color = ~factpal(pc_data2$ntile),opacity = 1, fillOpacity = 1, label = labels2)  %>% 
+  addLegend(pal = factpal2, values = pc_data2$ntile, labels=pc_data2$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+
+```
+
+*** 
+Some more text about things.
+
+
+### The third maps looks at dependency. {data-commentary-width=400}
+ 
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data3, stroke = T, color = ~factpal(pc_data3$ntile),opacity = 1, fillOpacity = 1, label = labels3)  %>% 
+  addLegend(pal = factpal3, values = pc_data3$ntile, labels=pc_data3$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+ 
+```
+
+*** 
+Some more text about things.
+
+
+### The fourth map looks at crime. {data-commentary-width=400}
+
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data4, stroke = T, color = ~factpal(pc_data4$ntile),opacity = 1, fillOpacity = 1, label = labels4)  %>% 
+  addLegend(pal = factpal4, values = pc_data4$ntile, labels=pc_data4$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+```
+
+*** 
+Some more text about things.
+
+### The fifth map looks at deprivation. {data-commentary-width=400}
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data5, stroke = T, color = ~factpal(pc_data5$ntile),opacity = 1, fillOpacity = 1, label = labels5)  %>% 
+  addLegend(pal = factpal5, values = pc_data5$ntile, labels=pc_data5$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+```
+
+*** 
+Some more text about things.
+
+
+### The sixt maps looks at health. {data-commentary-width=400}
+
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data6, stroke = T, color = ~factpal(pc_data6$ntile),opacity = 1, fillOpacity = 1, label = labels6)  %>% 
+  addLegend(pal = factpal6, values = pc_data6$ntile, labels=pc_data6$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+```
+
+
+*** 
+Some more text about things.
+
+### The seventh map looks at blight. {data-commentary-width=400}
+
+```{r}
+library(leaflet)
+leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
+  setMapWidgetStyle(list(background = "white")) %>%  
+  addPolygons(data = pc_data7, stroke = T, color = ~factpal(pc_data7$ntile),opacity = 1, fillOpacity = 1, label = labels7)  %>% 
+  addLegend(pal = factpal7, values = pc_data7$ntile, labels=pc_data7$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+```
+
+*** 
+Some more text about things.
+
