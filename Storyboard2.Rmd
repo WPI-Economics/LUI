@@ -235,9 +235,11 @@ labels7 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data7$pco
 ```{r}
 library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data1, stroke = T, color = ~factpal(pc_data1$ntile),opacity = 1, fillOpacity = 1, label = labels1)  %>% 
-  addLegend(pal = factpal, values = pc_data1$ntile, labels=pc_data1$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data1, stroke = T, color = ~factpal(pc_data1$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels1,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal, values = pc_data1$ntile, labels=pc_data1$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
   removeDrawToolbar(clearFeatures = T) 
 ```
 
@@ -250,11 +252,12 @@ Some text about things.
 ```{r}
 library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data2, stroke = T, color = ~factpal(pc_data2$ntile),opacity = 1, fillOpacity = 1, label = labels2)  %>% 
-  addLegend(pal = factpal2, values = pc_data2$ntile, labels=pc_data2$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data2, stroke = T, color = ~factpal(pc_data2$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels2,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal2, values = pc_data2$ntile, labels=pc_data2$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
   removeDrawToolbar(clearFeatures = T) 
-
 ```
 
 *** 
@@ -267,10 +270,12 @@ Some more text about things.
 ```{r}
 library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data3, stroke = T, color = ~factpal(pc_data3$ntile),opacity = 1, fillOpacity = 1, label = labels3)  %>% 
-  addLegend(pal = factpal3, values = pc_data3$ntile, labels=pc_data3$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
-  removeDrawToolbar(clearFeatures = T) 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data3, stroke = T, color = ~factpal(pc_data3$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels3,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal3, values = pc_data3$ntile, labels=pc_data1$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T)
  
 ```
 
@@ -284,10 +289,14 @@ Some more text about things.
 ```{r}
 library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data4, stroke = T, color = ~factpal(pc_data4$ntile),opacity = 1, fillOpacity = 1, label = labels4)  %>% 
-  addLegend(pal = factpal4, values = pc_data4$ntile, labels=pc_data4$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data4, stroke = T, color = ~factpal(pc_data4$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels4,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal4, values = pc_data4$ntile, labels=4$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
   removeDrawToolbar(clearFeatures = T) 
+
+
 ```
 
 *** 
@@ -298,10 +307,12 @@ Some more text about things.
 ```{r}
 library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data5, stroke = T, color = ~factpal(pc_data5$ntile),opacity = 1, fillOpacity = 1, label = labels5)  %>% 
-  addLegend(pal = factpal5, values = pc_data5$ntile, labels=pc_data5$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
-  removeDrawToolbar(clearFeatures = T) 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data5, stroke = T, color = ~factpal(pc_data5$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels5,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal5, values = pc_data5$ntile, labels=pc_data5$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T)
 ```
 
 *** 
@@ -313,11 +324,15 @@ Some more text about things.
 
 ```{r}
 library(leaflet)
+library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data6, stroke = T, color = ~factpal(pc_data6$ntile),opacity = 1, fillOpacity = 1, label = labels6)  %>% 
-  addLegend(pal = factpal6, values = pc_data6$ntile, labels=pc_data6$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data6, stroke = T, color = ~factpal(pc_data6$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels6,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal6, values = pc_data6$ntile, labels=pc_data6$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
   removeDrawToolbar(clearFeatures = T) 
+
 ```
 
 
@@ -328,11 +343,16 @@ Some more text about things.
 
 ```{r}
 library(leaflet)
+library(leaflet)
 leaflet() %>% setView(-1.161877,52.350304, 6) %>% #setView gives centre coordinates and zoom level
-  setMapWidgetStyle(list(background = "white")) %>%  
-  addPolygons(data = pc_data7, stroke = T, color = ~factpal(pc_data7$ntile),opacity = 1, fillOpacity = 1, label = labels7)  %>% 
-  addLegend(pal = factpal7, values = pc_data7$ntile, labels=pc_data7$ntile, opacity=1, position = "bottomright" , title="Ranking quintiles") %>% 
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.Positron, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data7, stroke = T, color = ~factpal(pc_data7$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels7,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal7, values = pc_data7$ntile, labels=pc_data7$ntile, opacity=1, position = "bottomright", title="Ranking quintiles") %>% 
   removeDrawToolbar(clearFeatures = T) 
+
+
 ```
 
 *** 
