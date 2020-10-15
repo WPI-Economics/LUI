@@ -55,28 +55,60 @@ pallette <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 
 ## MAP 1 - overall index
 
-#select for map 1
-map1<- combi[,c(1,2,9)]
+#select for map 0
+map0<- combi[,c(1,2,9)]
 
 #merge with master 
-pc_data1 <- merge(pc2019,map1, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+pc_data0 <- merge(pc2019,map0, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
 
-# a new column for ntile
-pc_data1$ntile <- ntile(pc_data1$`Levelling-Up index`, 5)  
+#new column for levelling up
+pc_data0$new[pc_data0$`Levelling-Up index` <= -10] <- "Priorities"
+pc_data0$new[pc_data0$`Levelling-Up index` > -10] <- "Borderliners"
+pc_data0$new[pc_data0$`Levelling-Up index` > 10] <- "Achievers"
 
 
+#remove NA
+pc_data0<- na.omit(pc_data0)
 
-factpal1 <- colorFactor(pallette, domain = pc_data1$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+# set colour pallette
+pallette0 <- c("#efe2e0", "#b0776e","#660a0b" )
 
-#change leveling up to character - rounding up first
-pc_data1$`Levelling-Up index`  <- round(pc_data1$`Levelling-Up index` , digits=0)
+#generate as factor
+pc_data0$new<- as.factor(as.character(pc_data0$new))
 
+
+factpal0 <- colorFactor(pallette0, pc_data0$new) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels1 <- sprintf("<strong>%s</strong><br/>%s ranking<sup></sup>", pc_data1$pcon19nm.x, roun(pc_data1$`Levelling-Up index`,0)) %>% lapply(htmltools::HTML)
+labels0 <- sprintf("<strong>%s</strong> <br/>%s<sup></sup> <br/>%s overall score<sup></sup>", pc_data0$pcon19nm.x, pc_data0$new, round(pc_data0$`Levelling-Up index`,0))  %>% lapply(htmltools::HTML)
+
+
 
 ################
 ################
+
+# test map 1
+
+
+
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.350304,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+  
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data0, stroke = T, color = ~factpal0(new),opacity = 1, fillOpacity = 0.9, weight=1, label = labels0,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal0, values = pc_data1$new, labels=pc_data0$new, opacity=1, position = "topright", title="Levelling Up Index") %>% 
+  removeDrawToolbar(clearFeatures = T) 
+
+
+
+################
+################
+
+
 
 # MAP 2 - spending power
 
