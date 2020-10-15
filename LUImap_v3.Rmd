@@ -1,0 +1,590 @@
+---
+title: "Levelling Up Index"
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+    theme: cosmo
+    social: menu
+    logo: smalllogo.png
+    css: styles.css
+
+    
+  
+---
+
+
+<style>                     
+.navbar {
+  background-color:white;
+  border-color:white;
+}
+
+.navbar-brand {
+color: #660A0B!important;
+font-style: arial;
+font-size: 20px;
+}
+
+.navbar-logo img {
+    position: absolute;
+    right: 40px;
+    top: -2.5px
+    
+
+}
+
+
+</style> 
+
+
+
+
+
+```{r setup, include= FALSE}
+library(sp)
+library(sf)
+library(geojsonio)
+library(leaflet)
+library(leaflet.extras)
+library(RColorBrewer)
+library(readxl)
+library(dplyr)
+library(mapview)
+library(hablar)
+library(tidyr)
+library(htmlwidgets)
+library(tidyverse)
+
+############ PREPARE RAW DATA AND BOUNDARY FILE
+#####
+LUI_main<- read_excel("Data/Cluster analysis for Jess 201013.xlsx", sheet = 1)
+LUI_sub<- read_excel("Data/Cluster analysis for Jess 201013.xlsx", sheet = 2)
+
+# Clean up 
+LUI_main<-LUI_main[-1,-1]
+LUI_sub<- LUI_sub[c(-1,-575:-579),-1]  
+
+# Match by PC code
+combi <- merge(LUI_sub,LUI_main,by = "PC code", all.y = T)
+combi <- combi[,-9]
+
+#remame cols so it's easier for later
+colnames(combi) <- c("pcon19cd", "pcon19nm", "Spending power", "Dependency", "Crime", "Deprivation", "Health", "Empty commercial properties", "Levelling-Up index")
+
+# JSON MAP - https://geoportal.statistics.gov.uk/datasets/westminster-parliamentary-constituencies-december-2019-boundaries-uk-buc
+# Import json
+pc2019 <- geojson_sf("https://opendata.arcgis.com/datasets/4c191bee309d4b2d8b2c5b94d2512af9_0.geojson")
+
+
+######### Issue with addreset button (won't allow multiple tabs) - this is a work-around
+addMyResetMapButton <- function(leaf) {
+  leaf %>%
+    addEasyButton(
+      easyButton(
+        icon = "ion-arrow-shrink", 
+        title = "Reset View", 
+        onClick = JS(
+          "function(btn, map){ map.setView(map._initialCenter, map._initialZoom); }"
+        )
+      )
+    ) %>% 
+    htmlwidgets::onRender(
+      JS(
+"
+function(el, x){ 
+  var map = this; 
+  map.whenReady(function(){
+    map._initialCenter = map.getCenter(); 
+    map._initialZoom = map.getZoom();
+  });
+}"
+      )
+    )
+}
+
+
+
+
+####
+# MAP 0 - indicator on alternative headline LU
+
+#select for map 0
+map0<- combi[,c(1,2,9)]
+
+#merge with master 
+pc_data0 <- merge(pc2019,map0, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+#new column for levelling up
+pc_data0$new[pc_data0$`Levelling-Up index` <= -10] <- "Priorities"
+pc_data0$new[pc_data0$`Levelling-Up index` > -10] <- "Borderliners"
+pc_data0$new[pc_data0$`Levelling-Up index` > 10] <- "Achievers"
+
+
+#remove NA
+pc_data0<- na.omit(pc_data0)
+
+# set colour pallette
+pallette0 <- c("#efe2e0", "#b0776e","#660a0b" )
+
+#generate as factor
+pc_data0$new<- as.factor(as.character(pc_data0$new))
+
+
+factpal0 <- colorFactor(pallette0, pc_data0$new) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels0 <- sprintf("<strong>%s</strong> <br/>%s<sup></sup> <br/>%s overall score<sup></sup>", pc_data0$pcon19nm.x, pc_data0$new, round(pc_data0$`Levelling-Up index`,0))  %>% lapply(htmltools::HTML)
+
+
+
+######
+# MAP 2 - spending power
+######
+
+#select for map 2
+map2<- combi[,c(1,2,3)]
+
+#merge with master 
+pc_data2 <- merge(pc2019,map2, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data2$ntile <- ntile(pc_data2$`Spending power`, 5)  
+
+#relabel quintile
+# change values to categories
+pc_data2$ntile[pc_data2$ntile == 1] <- "1 (lowest score)"
+pc_data2$ntile[pc_data2$ntile == 2] <- "2"
+pc_data2$ntile[pc_data2$ntile == 3] <- "3"
+pc_data2$ntile[pc_data2$ntile == 4] <- "4"
+pc_data2$ntile[pc_data2$ntile== 5] <- "5 (highest score)"
+
+#remove NA
+pc_data2<- na.omit(pc_data2)
+
+# set colour pallette
+pallette2 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal2 <- colorFactor(pallette2, domain = pc_data2$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels2 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data2$pcon19nm.x, round(pc_data2$`Spending power`,0)) %>% lapply(htmltools::HTML)
+
+
+#####
+# MAP 3 - dependency
+#####
+
+#select for map 3 
+map3<- combi[,c(1,2,4)]
+
+#merge with master 
+pc_data3 <- merge(pc2019,map3, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data3$ntile <- ntile(pc_data3$Dependency, 5)  
+
+# change values to categories
+pc_data3$ntile[pc_data3$ntile == 1] <- "1 (lowest score)"
+pc_data3$ntile[pc_data3$ntile == 2] <- "2"
+pc_data3$ntile[pc_data3$ntile == 3] <- "3"
+pc_data3$ntile[pc_data3$ntile == 4] <- "4"
+pc_data3$ntile[pc_data3$ntile== 5] <- "5 (highest score)"
+
+#remove NA
+pc_data3<- na.omit(pc_data3)
+
+
+# set colour pallette
+pallette3 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal3 <- colorFactor(pallette3, domain = pc_data3$ntile, reverse=TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+#this makes the hover over popup label
+labels3 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data3$pcon19nm.x, round(pc_data3$Dependency,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 4 - Crime
+#####
+
+#select for map 3 
+map4<- combi[,c(1,2,5)]
+
+#merge with master 
+pc_data4 <- merge(pc2019,map4, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data4$ntile <- ntile(pc_data4$Crime, 5)  
+
+# change values to categories
+pc_data4$ntile[pc_data4$ntile == 1] <- "1 (lowest score)"
+pc_data4$ntile[pc_data4$ntile == 2] <- "2"
+pc_data4$ntile[pc_data4$ntile == 3] <- "3"
+pc_data4$ntile[pc_data4$ntile == 4] <- "4"
+pc_data4$ntile[pc_data4$ntile== 5] <- "5 (highest score)"
+
+#remove NA
+pc_data4<- na.omit(pc_data4)
+
+# set colour pallette
+pallette4 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal4 <- colorFactor(pallette4, domain = pc_data4$ntile, reverse = TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels4 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data4$pcon19nm.x, round(pc_data4$Crime,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 5 - Deprivation
+#####
+
+#select for map 3 
+map5<- combi[,c(1,2,6)]
+
+#merge with master 
+pc_data5 <- merge(pc2019,map5, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data5$ntile <- ntile(pc_data5$Deprivation, 5)  
+
+# change values to categories
+pc_data5$ntile[pc_data5$ntile == 1] <- "1 (lowest score)"
+pc_data5$ntile[pc_data5$ntile == 2] <- "2"
+pc_data5$ntile[pc_data5$ntile == 3] <- "3"
+pc_data5$ntile[pc_data5$ntile == 4] <- "4"
+pc_data5$ntile[pc_data5$ntile== 5] <- "5 (highest score)"
+
+#remove NA
+pc_data5<- na.omit(pc_data5)
+
+# set colour pallette
+pallette5 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal5 <- colorFactor(pallette5, domain = pc_data5$ntile, reverse=TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#labels
+labels5 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data5$pcon19nm.x, round(pc_data5$Deprivation,0)) %>% lapply(htmltools::HTML)
+
+##### 
+## MAP 6 - Health
+##### 
+# Wales is missing
+
+#select for map 6
+map6<- combi[,c(1,2,7)]
+
+#merge with master 
+pc_data6 <- merge(pc2019,map6, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data6$ntile <- ntile(pc_data6$Health, 5)  
+
+# change values to categories
+pc_data6$ntile[pc_data6$ntile == 1] <- "1 (lowest score)"
+pc_data6$ntile[pc_data6$ntile == 2] <- "2"
+pc_data6$ntile[pc_data6$ntile == 3] <- "3"
+pc_data6$ntile[pc_data6$ntile == 4] <- "4"
+pc_data6$ntile[pc_data6$ntile== 5] <- "5 (highest score)"
+
+
+#remove NA
+pc_data6<- na.omit(pc_data6)
+
+
+# set colour pallette
+pallette6 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal6 <- colorFactor(pallette6, domain = pc_data6$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels6 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data6$pcon19nm.x, round(pc_data6$Health,0)) %>% lapply(htmltools::HTML)
+
+#####
+## MAP 7 - Empty commercial properties
+#####
+
+#select for map 6
+map7<- combi[,c(1,2,8)]
+
+#merge with master 
+pc_data7 <- merge(pc2019,map7, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
+
+# a new column for ntile
+pc_data7$ntile <- ntile(pc_data7$'Empty commercial properties', 5)  
+
+# change values to categories
+pc_data7$ntile[pc_data7$ntile == 1] <- "1 (lowest score)"
+pc_data7$ntile[pc_data7$ntile == 2] <- "2"
+pc_data7$ntile[pc_data7$ntile == 3] <- "3"
+pc_data7$ntile[pc_data7$ntile == 4] <- "4"
+pc_data7$ntile[pc_data7$ntile== 5] <- "5 (highest score)"
+
+
+#remove NA
+pc_data7<- na.omit(pc_data7)
+
+# set colour pallette
+pallette7 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
+
+factpal7 <- colorFactor(pallette7, domain = pc_data7$ntile, reverse= TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
+
+#this makes the hover over popup label
+labels7 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data7$pcon19nm.x, round(pc_data7$'Empty commercial properties',0)) %>% lapply(htmltools::HTML)
+
+```
+
+### Main Levelling Up Index  {data-commentary-width=600}
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data0, stroke = T, color = ~factpal0(new),opacity = 1, fillOpacity = 0.9, weight=1, label = labels0,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal0, values = pc_data0$new, labels=pc_data0$new, opacity=1, position = "topright", title="Levelling Up Index") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+
+
+```
+
+
+*** 
+
+
+Our analysis revealed three broad categories of place, with different needs and levels of success. These three categories are represented by the three colours on the Index. The Priorities are the darkest shade, the Borderliners a medium shade, and the Achievers the lightest. 
+
+
+1. **The Achievers** — These places perform better than the England and Wales average and are more likely to be in the South of England or upwardly mobile suburbs of major urban centres.
+
+2. **The Borderliners** — These places hover around the England and Wales average on many of these indicators and are often in a strong position to capitalise on certain sectoral advantages to boost their recovery. Nevertheless, support will be needed in certain areas. They are spread fairly evenly across our research area.
+
+3. **The Priorities** — These places have historically suffered structural weaknesses through industrial decline and are often disadvantaged through Government spending. These seats, disproportionately in the North and Midlands of England and in Wales, should be the priorities of the levelling up agenda.  
+
+
+
+
+We have used the following six indicators to determine the overall ‘levelling up’ score:
+
+
+- **Spending power** – comprised of employment and wage data to show economic strength.
+
+
+- **Financial dependency** – focussed on Job Seekers’ Allowance and Universal Credit claims and skills rates to show an area’s current and likely dependence on state support.
+
+
+- **Crime** – the crime rates for each area.
+
+
+- **Deprivation** (England only) – deprivation score across seven metrics.
+
+
+- **Health** (England only) – based on both number of GPs and life expectancy for each area.
+
+
+- **Empty commercial properties** – based on commercial vacancy rates.
+
+
+    
+### Spending power {data-commentary-width=600}
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  addPolygons(data = pc_data2, stroke = T, color = ~factpal2(pc_data2$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels2,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal2, values = pc_data2$ntile, labels=pc_data2$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T)  %>% 
+  addMyResetMapButton()
+
+```
+
+*** 
+
+A higher score is better on the ‘Spending power’ indicator. The England and Wales average is 100. This indicator is comprised of employment and wage data to show a constituency’s economic strength. 
+
+Areas of Wales, Northern and Midlands towns, inner cities and coastal areas record lower economic scores on the ‘spending power’ indicator.  
+
+Clacton has the lowest score followed by Edmonton, Dwyfor Meirionnydd and Leicester East. 
+
+This compares to those areas least in need of support, largely located in London where the economy is strongest, and employment is high. 
+
+Cities of London and Westminster constituency scores amongst the highest and has a score of 244, around two and half times the national average. Of the top scoring constituencies, many are in London and the wider South. 
+
+Clacton has the lowest score at 64. Poplar and Limehouse has the highest score at 263. 
+
+
+### Financial dependency {data-commentary-width=600}
+ 
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  addPolygons(data = pc_data3, stroke = T, color = ~factpal3(pc_data3$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels3,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal3, values = pc_data3$ntile, labels=pc_data1$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+ 
+```
+
+*** 
+
+A lower score is better on the ‘Financial Dependency’ indicator. The England and Wales average is 100. This indicator uses Job Seekers’ Allowance, Universal Credit claims, and skills rates to show an area’s current and likely dependence on state support.
+
+Towns and cities in the Midlands dominate the dependency metric with areas of Birmingham, Wolverhampton and Dudley all running at double the national average, highlighting the major employment challenges in these areas. 11 of the top 20 constituencies on this measure are in the West Midlands where benefit dependency is much higher than the England and Wales average, in many cases more than double. 
+
+Other constituencies scoring highly on this measure are Bradford East and West, Hartlepool, Middlesbrough, and Easington in County Durham. Many of the constituencies scoring highly on this measure are in areas where heavy industry previously supported a large amount of employment. 
+
+Rural, suburban and student areas have the lowest scores. Sheffield Hallam, Mole Valley and Winchester are at a third of the England and Wales average. 
+
+Birmingham, Ladywood has the highest score at 266. Sheffield, Hallam has the lowest score at 26. 
+
+
+
+### Crime {data-commentary-width=600}
+
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  
+  addPolygons(data = pc_data4, stroke = T, color = ~factpal4(pc_data4$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels4,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal4, values = pc_data4$ntile, labels=4$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+
+
+```
+
+*** 
+
+A lower score is better on the ‘Crime’ indicator. The England and Wales average is 100. This indicator is simply the crime rates for each area.
+
+Towns and cities in the North record the highest crime metrics with Blackpool, Middlesbrough, Leeds and Bradford amongst the top 10, with crime rates running at around twice the national average. Many of the areas with a higher ‘financial dependency’ score also have a high crime rate. 
+
+Affluent and more rural areas of the UK have the lowest crime figures, at less than half the national average, ranging from Altrincham and Sale West in the North to Central Devon in the South. Cheadle in Greater Manchester is the constituency with the lowest crime rate compared to the England and Wales average. 
+
+Blackpool South has the highest score at 233. Cheadle has the lowest score at 35. 
+
+
+### Deprivation {data-commentary-width=600}
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data5, stroke = T, color = ~factpal5(pc_data5$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels5,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal5, values = pc_data5$ntile, labels=pc_data5$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+
+```
+
+*** 
+
+A lower score is better on the ‘Deprivation’ indicator. The England average is 100. This indicator is based on the deprivation score across seven metrics. 
+
+Towns and cities in the Midlands, Yorkshire, North East and North West are most likely to have a higher number of people suffering from deprivation. 
+
+Liverpool, Birmingham, Manchester, and Bradford are cities with multiple constituencies in the top thirty of this indicator, running at two and a half times the national average. This creates a large gap with those facing the lowest levels, such as Wokingham, which is eight times lower and a quarter of the national average.
+
+Liverpool, Walton has the highest score at 258. Wokingham has the lowest score at 28
+
+
+
+### Health {data-commentary-width=600}
+
+
+```{r}
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data6, stroke = T, color = ~factpal6(pc_data6$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels6,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal6, values = pc_data6$ntile, labels=pc_data6$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+
+```
+
+
+*** 
+
+A higher score is better on the ‘Health’ indicator. The England average is 100. This indicator is based on both the number of GPs and the average life expectancy for an area.
+
+Coastal areas have some of the poorest health infrastructure and lowest life expectancy and this is true across multiple regions of the UK. 
+
+Hastings, Clacton, Hull, Thurrock and Grimsby feature in the top 10 with scores under 80. Kingston Upon Hull’s three seats are particularly badly affected and all fall within the bottom five. 
+
+The areas with the best health outcomes are located in the South, particularly the South West, including seats in Devon, Dorset and Somerset. 
+
+Kingston Upon Hull East has the lowest score at 69. Sheffield South East has the highest score at 133. 
+
+
+
+### Empty commercial properties {data-commentary-width=600}
+
+```{r}
+library(leaflet)
+library(leaflet)
+leaflet(options= leafletOptions(minZoom= 6)) %>%
+  setView(lng = -2.302120,
+          lat = 52.3,
+          zoom= 6) %>% #setView gives centre coordinates and zoom level
+
+  setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
+  
+  addPolygons(data = pc_data7, stroke = T, color = ~factpal7(pc_data7$ntile),opacity = 1, fillOpacity = 0.9, weight=1, label = labels7,  highlight= highlightOptions(color="white", weight=2, bringToFront= T))  %>% 
+  
+  addLegend(pal = factpal7, values = pc_data7$ntile, labels=pc_data7$ntile, opacity=1, position = "topright", title="Score quintiles") %>% 
+  removeDrawToolbar(clearFeatures = T) %>% 
+  addMyResetMapButton()
+
+
+```
+
+*** 
+
+A lower score is better on the ‘Empty commercial properties’ indicator. The England and Wales average is 100. This indicator is based on commercial vacancy rates, i.e. the number of empty shops in a constituency. 
+
+Seats in the North and Wales record lower quality of place scores with Grimsby, Newport and Blackpool amongst the highest. They record scores almost twice the national average. 29 out of the top 30 highest scoring seats are in the North, Midlands, or Wales. Croydon Central is the only southern seat in the top 30. 
+
+Areas in the South and East have better quality of place scores with Forest of Dean, Mid Bedfordshire, South Cambridgeshire and Rayleigh and Wickford recording scores at half the national average.
+
+Both Great Grimsby and Newport West have the highest score at 199. Clwyd South has the lowest score at 6, followed by the Forest of Dean at 23.  
+
+
