@@ -17,6 +17,7 @@ output:
 .navbar {
   background-color:white;
   border-color:white;
+  padding-bottom:10px;
 }
 
 .navbar-brand {
@@ -28,7 +29,7 @@ font-size: 20px;
 .navbar-logo img {
     position: absolute;
     right: 40px;
-    top: -2.5px
+    top: 0px
     
 
 }
@@ -56,20 +57,25 @@ library(htmlwidgets)
 library(tidyverse)
 
 ############ PREPARE RAW DATA AND BOUNDARY FILE
+
 #####
 LUI_main<- read_excel("Data/Cluster analysis for Jess 201013.xlsx", sheet = 1)
 LUI_sub<- read_excel("Data/Cluster analysis for Jess 201013.xlsx", sheet = 2)
 
 # Clean up 
-LUI_main<-LUI_main[-1,-1]
+LUI_main<-LUI_main[c(2,3,4,5)]
 LUI_sub<- LUI_sub[c(-1,-575:-579),-1]  
 
 # Match by PC code
 combi <- merge(LUI_sub,LUI_main,by = "PC code", all.y = T)
-combi <- combi[,-9]
+combi <- combi[-1,-9]
 
 #remame cols so it's easier for later
-colnames(combi) <- c("pcon19cd", "pcon19nm", "Spending power", "Dependency", "Crime", "Deprivation", "Health", "Empty commercial properties", "Levelling-Up index")
+colnames(combi) <- c("pcon19cd", "pcon19nm", "Spending power", "Dependency", "Crime", "Deprivation", "Health", "Empty commercial properties","Ranking", "new")
+
+
+
+
 
 # JSON MAP - https://geoportal.statistics.gov.uk/datasets/westminster-parliamentary-constituencies-december-2019-boundaries-uk-buc
 # Import json
@@ -109,15 +115,10 @@ function(el, x){
 # MAP 0 - indicator on alternative headline LU
 
 #select for map 0
-map0<- combi[,c(1,2,9)]
+map0<- combi[,c(1,2,9,10)]
 
 #merge with master 
 pc_data0 <- merge(pc2019,map0, by.y= "pcon19cd", by.x="pcon19cd", all.x= T)
-
-#new column for levelling up
-pc_data0$new[pc_data0$`Levelling-Up index` <= -10] <- "Priorities"
-pc_data0$new[pc_data0$`Levelling-Up index` > -10] <- "Borderliners"
-pc_data0$new[pc_data0$`Levelling-Up index` > 10] <- "Achievers"
 
 
 #remove NA
@@ -126,14 +127,11 @@ pc_data0<- na.omit(pc_data0)
 # set colour pallette
 pallette0 <- c("#efe2e0", "#b0776e","#660a0b" )
 
-#generate as factor
-pc_data0$new<- as.factor(as.character(pc_data0$new))
-
 
 factpal0 <- colorFactor(pallette0, pc_data0$new) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels0 <- sprintf("<strong>%s</strong> <br/>%s<sup></sup> <br/>%s overall score<sup></sup>", pc_data0$pcon19nm.x, pc_data0$new, round(pc_data0$`Levelling-Up index`,0))  %>% lapply(htmltools::HTML)
+labels0 <- sprintf("<strong>%s</strong> <br/>%s<sup></sup> <br/> Overall ranking: %s<sup></sup>", pc_data0$pcon19nm.x, pc_data0$new,pc_data0$Ranking)  %>% lapply(htmltools::HTML)
 
 
 
@@ -167,7 +165,7 @@ pallette2 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 factpal2 <- colorFactor(pallette2, domain = pc_data2$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels2 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data2$pcon19nm.x, round(pc_data2$`Spending power`,0)) %>% lapply(htmltools::HTML)
+labels2 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data2$pcon19nm.x, round(pc_data2$`Spending power`,0)) %>% lapply(htmltools::HTML)
 
 
 #####
@@ -201,7 +199,7 @@ factpal3 <- colorFactor(pallette3, domain = pc_data3$ntile, reverse=TRUE) #"Set3
 
 #this makes the hover over popup label
 #this makes the hover over popup label
-labels3 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data3$pcon19nm.x, round(pc_data3$Dependency,0)) %>% lapply(htmltools::HTML)
+labels3 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data3$pcon19nm.x, round(pc_data3$Dependency,0)) %>% lapply(htmltools::HTML)
 
 #####
 ## MAP 4 - Crime
@@ -232,7 +230,7 @@ pallette4 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 factpal4 <- colorFactor(pallette4, domain = pc_data4$ntile, reverse = TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels4 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data4$pcon19nm.x, round(pc_data4$Crime,0)) %>% lapply(htmltools::HTML)
+labels4 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data4$pcon19nm.x, round(pc_data4$Crime,0)) %>% lapply(htmltools::HTML)
 
 #####
 ## MAP 5 - Deprivation
@@ -263,7 +261,7 @@ pallette5 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 factpal5 <- colorFactor(pallette5, domain = pc_data5$ntile, reverse=TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #labels
-labels5 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data5$pcon19nm.x, round(pc_data5$Deprivation,0)) %>% lapply(htmltools::HTML)
+labels5 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data5$pcon19nm.x, round(pc_data5$Deprivation,0)) %>% lapply(htmltools::HTML)
 
 ##### 
 ## MAP 6 - Health
@@ -297,7 +295,7 @@ pallette6 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 factpal6 <- colorFactor(pallette6, domain = pc_data6$ntile) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels6 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data6$pcon19nm.x, round(pc_data6$Health,0)) %>% lapply(htmltools::HTML)
+labels6 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data6$pcon19nm.x, round(pc_data6$Health,0)) %>% lapply(htmltools::HTML)
 
 #####
 ## MAP 7 - Empty commercial properties
@@ -329,7 +327,7 @@ pallette7 <- c("#660a0b", "#8d443a","#b0776e", "#d1aba5", "#efe2e0")
 factpal7 <- colorFactor(pallette7, domain = pc_data7$ntile, reverse= TRUE) #"Set3 is a colorbrewer preset https://www.r-graph-gallery.com/38-rcolorbrewers-palettes.html
 
 #this makes the hover over popup label
-labels7 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data7$pcon19nm.x, round(pc_data7$'Empty commercial properties',0)) %>% lapply(htmltools::HTML)
+labels7 <- sprintf("<strong>%s</strong><br/>Score: %s<sup></sup>", pc_data7$pcon19nm.x, round(pc_data7$'Empty commercial properties',0)) %>% lapply(htmltools::HTML)
 
 ```
 
@@ -339,8 +337,8 @@ labels7 <- sprintf("<strong>%s</strong><br/>%s score<sup></sup>", pc_data7$pcon1
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
-          zoom= 6) %>% #setView gives centre coordinates and zoom level
+          lat = 53,
+          zoom = 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
   
@@ -357,16 +355,19 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 *** 
 
 
-Our analysis revealed three broad categories of place, with different needs and levels of success. These three categories are represented by the three colours on the Index. The Priorities are the darkest shade, the Borderliners a medium shade, and the Achievers the lightest. 
+The map gives a score to each constituency based on their overall ‘levelling up’ ranking. The constituency most in need of levelling up, Blackpool South, has a ranking of 1. The constituency least in need of levelling up, South Cambridgeshire, has a ranking of 573.
+
+
+Our analysis revealed three broad categories of place, with different needs and levels of success. These three categories are represented by the three colours on the Index. The Priorities are the darkest shade, the Borderliners a medium shade, and the Achievers the lightest.
 
 
 1. **The Achievers** — These places perform better than the England and Wales average and are more likely to be in the South of England or upwardly mobile suburbs of major urban centres.
 
+
 2. **The Borderliners** — These places hover around the England and Wales average on many of these indicators and are often in a strong position to capitalise on certain sectoral advantages to boost their recovery. Nevertheless, support will be needed in certain areas. They are spread fairly evenly across our research area.
 
-3. **The Priorities** — These places have historically suffered structural weaknesses through industrial decline and are often disadvantaged through Government spending. These seats, disproportionately in the North and Midlands of England and in Wales, should be the priorities of the levelling up agenda.  
 
-
+3. **The Priorities** — These places have historically suffered structural weaknesses through industrial decline and are often disadvantaged through Government spending. These seats, disproportionately in the North and Midlands of England and in Wales, should be the priorities of the levelling up agenda.
 
 
 We have used the following six indicators to determine the overall ‘levelling up’ score:
@@ -397,7 +398,7 @@ We have used the following six indicators to determine the overall ‘levelling 
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -411,17 +412,27 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A higher score is better on the ‘Spending power’ indicator. The England and Wales average is 100. This indicator is comprised of employment and wage data to show a constituency’s economic strength. 
 
-Areas of Wales, Northern and Midlands towns, inner cities and coastal areas record lower economic scores on the ‘spending power’ indicator.  
+A higher score is better on the ‘Spending Power’ indicator. This indicator is comprised of employment and wage data to show a constituency’s economic strength. 
 
-Clacton has the lowest score followed by Edmonton, Dwyfor Meirionnydd and Leicester East. 
 
-This compares to those areas least in need of support, largely located in London where the economy is strongest, and employment is high. 
+The England and Wales average is 100. A constituency with a score of 110 will be 10 per cent above the England and Wales average in terms of spending power, while a constituency with a score of 90 will be 10 per cent below the England and Wales average. 
 
-Cities of London and Westminster constituency scores amongst the highest and has a score of 244, around two and half times the national average. Of the top scoring constituencies, many are in London and the wider South. 
 
-Clacton has the lowest score at 64. Poplar and Limehouse has the highest score at 263. 
+Areas of Wales, Northern and Midlands towns, inner cities and coastal areas record lower economic scores on the ‘spending power’ indicator.
+
+
+Clacton has the lowest score followed by Edmonton, Dwyfor Meirionnydd and Leicester East.
+
+
+This compares to those areas least in need of support, largely located in London where the economy is strongest, and employment is high.
+
+
+Cities of London and Westminster constituency scores amongst the highest and has a score of 244, around two and half times the national average. Of the top scoring constituencies, many are in London and the wider South.
+
+
+Clacton has the lowest score at 64. Poplar and Limehouse has the highest score at 263.
+
 
 
 ### Financial dependency {data-commentary-width=600}
@@ -429,9 +440,9 @@ Clacton has the lowest score at 64. Poplar and Limehouse has the highest score a
 
 ```{r}
 library(leaflet)
-leaflet(options= leafletOptions(minZoom= 6)) %>%
+leaflet(options= leafletOptions(minZoom= 6,  zoomSnap = 0.50, zoomDelta = 0.3)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -445,15 +456,23 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A lower score is better on the ‘Financial Dependency’ indicator. The England and Wales average is 100. This indicator uses Job Seekers’ Allowance, Universal Credit claims, and skills rates to show an area’s current and likely dependence on state support.
 
-Towns and cities in the Midlands dominate the dependency metric with areas of Birmingham, Wolverhampton and Dudley all running at double the national average, highlighting the major employment challenges in these areas. 11 of the top 20 constituencies on this measure are in the West Midlands where benefit dependency is much higher than the England and Wales average, in many cases more than double. 
+A lower score is better on the ‘Financial Dependency’ indicator. This indicator uses Job Seekers’ Allowance, Universal Credit claims, and skills rates to show an area’s current and likely dependence on state support. 
 
-Other constituencies scoring highly on this measure are Bradford East and West, Hartlepool, Middlesbrough, and Easington in County Durham. Many of the constituencies scoring highly on this measure are in areas where heavy industry previously supported a large amount of employment. 
 
-Rural, suburban and student areas have the lowest scores. Sheffield Hallam, Mole Valley and Winchester are at a third of the England and Wales average. 
+The England and Wales average is 100. A constituency with a score of 110 will be 10 per cent above the England and Wales average on this measure of dependency, while a constituency with a score of 90 will be 10 per cent below the England and Wales average. 
 
-Birmingham, Ladywood has the highest score at 266. Sheffield, Hallam has the lowest score at 26. 
+
+Towns and cities in the Midlands dominate the dependency metric with areas of Birmingham, Wolverhampton and Dudley all running at double the national average, highlighting the major employment challenges in these areas. 11 of the top 20 constituencies on this measure are in the West Midlands where benefit dependency is much higher than the England and Wales average, in many cases more than double.
+
+
+Other constituencies scoring highly on this measure are Bradford East and West, Hartlepool, Middlesbrough, and Easington in County Durham. Many of the constituencies scoring highly on this measure are in areas where heavy industry previously supported a large amount of employment.
+
+
+Rural, suburban and student areas have the lowest scores. Sheffield Hallam, Mole Valley and Winchester are at a third of the England and Wales average.
+
+
+Birmingham, Ladywood has the highest score at 266. Sheffield, Hallam has the lowest score at 26.
 
 
 
@@ -464,7 +483,7 @@ Birmingham, Ladywood has the highest score at 266. Sheffield, Hallam has the low
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -481,13 +500,20 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A lower score is better on the ‘Crime’ indicator. The England and Wales average is 100. This indicator is simply the crime rates for each area.
+A lower score is better on the ‘Crime’ indicator. This indicator is simply the crime rate for each area.
 
-Towns and cities in the North record the highest crime metrics with Blackpool, Middlesbrough, Leeds and Bradford amongst the top 10, with crime rates running at around twice the national average. Many of the areas with a higher ‘financial dependency’ score also have a high crime rate. 
 
-Affluent and more rural areas of the UK have the lowest crime figures, at less than half the national average, ranging from Altrincham and Sale West in the North to Central Devon in the South. Cheadle in Greater Manchester is the constituency with the lowest crime rate compared to the England and Wales average. 
+The England and Wales average is 100. A constituency with a score of 110 will have a crime rate 10 per cent above the England and Wales average, while a constituency with a score of 90 will have a crime rate 10 per cent below the England and Wales average. 
 
-Blackpool South has the highest score at 233. Cheadle has the lowest score at 35. 
+
+Towns and cities in the North record the highest crime metrics with Blackpool, Middlesbrough, Leeds and Bradford amongst the top 10, with crime rates running at around twice the national average. Many of the areas with a higher ‘financial dependency’ score also have a high crime rate.
+
+
+Affluent and more rural areas of the UK have the lowest crime figures, at less than half the national average, ranging from Altrincham and Sale West in the North to Central Devon in the South. Cheadle in Greater Manchester is the constituency with the lowest crime rate compared to the England and Wales average.
+
+
+Blackpool South has the highest score at 233. Cheadle has the lowest score at 35.
+
 
 
 ### Deprivation {data-commentary-width=600}
@@ -496,7 +522,7 @@ Blackpool South has the highest score at 233. Cheadle has the lowest score at 35
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -511,13 +537,20 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A lower score is better on the ‘Deprivation’ indicator. The England average is 100. This indicator is based on the deprivation score across seven metrics. 
+A lower score is better on the ‘Deprivation’ indicator. This indicator is based on the deprivation score across seven metrics.
 
-Towns and cities in the Midlands, Yorkshire, North East and North West are most likely to have a higher number of people suffering from deprivation. 
+
+The England average is 100. A constituency with a score of 110 will be 10 per cent above the England and Wales average on this deprivation measure, while a constituency with a score of 90 will be 10 per cent below the England and Wales average.
+
+
+Towns and cities in the Midlands, Yorkshire, North East and North West are most likely to have a higher number of people suffering from deprivation.
+
 
 Liverpool, Birmingham, Manchester, and Bradford are cities with multiple constituencies in the top thirty of this indicator, running at two and a half times the national average. This creates a large gap with those facing the lowest levels, such as Wokingham, which is eight times lower and a quarter of the national average.
 
-Liverpool, Walton has the highest score at 258. Wokingham has the lowest score at 28
+
+Liverpool, Walton has the highest score at 258. Wokingham has the lowest score at 28.
+
 
 
 
@@ -528,7 +561,7 @@ Liverpool, Walton has the highest score at 258. Wokingham has the lowest score a
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -544,15 +577,22 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A higher score is better on the ‘Health’ indicator. The England average is 100. This indicator is based on both the number of GPs and the average life expectancy for an area.
+A higher score is better on the ‘Health’ indicator. This indicator is based on both the number of GPs and the average life expectancy for an area.
 
-Coastal areas have some of the poorest health infrastructure and lowest life expectancy and this is true across multiple regions of the UK. 
 
-Hastings, Clacton, Hull, Thurrock and Grimsby feature in the top 10 with scores under 80. Kingston Upon Hull’s three seats are particularly badly affected and all fall within the bottom five. 
+The England average is 100. A constituency with a score of 110 will be 10 per cent above the England and Wales average, while a constituency with a score of 90 will be 10 per cent below the England and Wales average. 
 
-The areas with the best health outcomes are located in the South, particularly the South West, including seats in Devon, Dorset and Somerset. 
 
-Kingston Upon Hull East has the lowest score at 69. Sheffield South East has the highest score at 133. 
+Coastal areas have some of the poorest health infrastructure and lowest life expectancy and this is true across multiple regions of the UK.
+
+
+Hastings, Clacton, Hull, Thurrock and Grimsby feature in the top 10 with scores under 80. Kingston Upon Hull’s three seats are particularly badly affected and all fall within the bottom five.
+
+
+The areas with the best health outcomes are located in the South, particularly the South West, including seats in Devon, Dorset and Somerset.
+
+
+Kingston Upon Hull East has the lowest score at 69. Sheffield South East has the highest score at 133.
 
 
 
@@ -563,7 +603,7 @@ library(leaflet)
 library(leaflet)
 leaflet(options= leafletOptions(minZoom= 6)) %>%
   setView(lng = -2.302120,
-          lat = 52.3,
+          lat = 53,
           zoom= 6) %>% #setView gives centre coordinates and zoom level
 
   setMapWidgetStyle(list(background = "white")) %>%  addProviderTiles(providers$CartoDB.PositronNoLabels, providerTileOptions(opacity = 1) ) %>% 
@@ -579,12 +619,16 @@ leaflet(options= leafletOptions(minZoom= 6)) %>%
 
 *** 
 
-A lower score is better on the ‘Empty commercial properties’ indicator. The England and Wales average is 100. This indicator is based on commercial vacancy rates, i.e. the number of empty shops in a constituency. 
-
-Seats in the North and Wales record lower quality of place scores with Grimsby, Newport and Blackpool amongst the highest. They record scores almost twice the national average. 29 out of the top 30 highest scoring seats are in the North, Midlands, or Wales. Croydon Central is the only southern seat in the top 30. 
-
-Areas in the South and East have better quality of place scores with Forest of Dean, Mid Bedfordshire, South Cambridgeshire and Rayleigh and Wickford recording scores at half the national average.
-
-Both Great Grimsby and Newport West have the highest score at 199. Clwyd South has the lowest score at 6, followed by the Forest of Dean at 23.  
+A lower score is better on the ‘Empty Commercial Properties’ indicator. This indicator is based on commercial vacancy rates, i.e. the number of empty commercial properties in a constituency. 
 
 
+The England and Wales average is 100. A constituency with a score of 110 will have 10 per cent more empty commercial properties than the England and Wales average, while a constituency with a score of 90 will be 10 per cent below the England and Wales average.
+
+
+Seats in the North and Wales record higher empty commercial properties rates with Grimsby, Newport and Blackpool amongst the highest. They record scores almost twice the national average. 29 out of the top 30 highest scoring seats are in the North, Midlands, or Wales. Croydon Central is the only southern seat in the top 30.
+
+
+Areas in the South and East have lower scores with Forest of Dean, Mid Bedfordshire, South Cambridgeshire and Rayleigh and Wickford recording scores at half the national average.
+
+
+Both Great Grimsby and Newport West have the highest score at 199. Clwyd South has the lowest score at 6, followed by the Forest of Dean at 23.
